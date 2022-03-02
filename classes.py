@@ -54,9 +54,9 @@ from library import *
 
 class c_Perceptron:
   def __init__(self, X_train, X_test, y_train, y_test):
-    perceptron = Perceptron() 
-    self.X_test = X_test
-    self.y_test = y_test
+    perceptron = Perceptron()
+    self.X_train, self.X_test = X_train, X_test
+    self.y_train, self.y_test = y_train, y_test
     # perceptron.fit(X_train, y_train) # accuracy = np.sum(predicted_test == y_test) / len(y_test)
     #v_accuracy = cross_val_score(perceptron, X_train, y_train, cv = 5) # perceptron_score     # accuracy = np.mean(v_accuracy)
     #print('v_accuracy', v_accuracy, '    accuracy', accuracy)
@@ -69,10 +69,40 @@ class c_Perceptron:
     self.test_accuracy, self.test_precision, self.test_recall, self.test_F1_score = compute_model_stats(y_test, y_test_predicted, 'Perceptron (Test) ')
 
   
+  def plot_learning_curves(self):
+    Cs = [0.01, 0.1, 1, 10] # definire un insieme di valori di C tenendo in considerazione le precedenti osservazioni sul suo effetto 
+    fig = plt.figure(figsize=(18,6))
+    for i, c in enumerate(Cs):
+      print('Training n°', i)
+      PERC = Perceptron()
+
+      train_sizes, train_scores, test_scores = learning_curve(PERC, X = self.X_test, y = self.y_test, train_sizes=np.linspace(0.1,1,10), cv = 5, n_jobs=-1, shuffle = True)
+
+      train_mean = np.mean(train_scores, axis=1)
+      train_std = np.std(train_scores, axis=1)
+      test_mean = np.mean(test_scores, axis=1)
+      test_std = np.std(test_scores, axis=1)
+
+      ax = fig.add_subplot(150+(i+1))
+      ax.plot(train_sizes, train_mean, color='blue', marker='o', markersize=5, label='Training accuracy')
+      ax.fill_between(train_sizes, train_mean + train_std, train_mean - train_std, alpha=0.15, color='blue')
+      ax.plot(train_sizes, test_mean, color='green', linestyle='--', marker='s', markersize=5, label='Validation accuracy')
+      ax.fill_between(train_sizes, test_mean + test_std, test_mean - test_std, alpha=0.15, color='green')
+      ax.grid()
+      ax.set_ylim((0.2,1))
+      ax.set_xlabel('Dimensione del training set')
+      ax.set_ylabel('Accuracy')# C = ' + str(c))
+      ax.legend(loc='lower right')
+    plt.show()
+
+
+
 
 
 class c_Logistic_Regression:
   def __init__(self, X_train, X_test, y_train, y_test, treshold=0.9, max_iter=1000):
+    self.X_train, self.X_test = X_train, X_test
+    self.y_train, self.y_test = y_train, y_test
     
     y_train_predicted = self.predict_Y(X_train, y_train, treshold)
     # print('y_train_predicted', y_train_predicted) # len: 15326       [False False  True ... False  True False]
@@ -106,6 +136,35 @@ class c_Logistic_Regression:
     soglia_prec = soglia[np.argmax(prec >= treshold)] #   SOGLIA=0.9   #  soglia_prec 0.23674 ---- massimo valore dell'array soglia   #  
     y_predicted_score = y_predicted_score >= soglia_prec # [False False False ... False False False]
     return y_predicted_score
+
+
+
+  def plot_learning_curves(self):
+    Cs = [0.01, 0.1, 1, 10] # definire un insieme di valori di C tenendo in considerazione le precedenti osservazioni sul suo effetto 
+    fig = plt.figure(figsize=(18,6))
+    for i, c in enumerate(Cs):
+      print('Training n°', i)
+
+      logit_cls = LogisticRegression(max_iter = 1000)
+      train_sizes, train_scores, test_scores = learning_curve(logit_cls, X = self.X_test, y = self.y_test, train_sizes=np.linspace(0.1,1,10), cv = 5, n_jobs=-1, shuffle = True)
+
+      train_mean = np.mean(train_scores, axis=1)
+      train_std = np.std(train_scores, axis=1)
+      test_mean = np.mean(test_scores, axis=1)
+      test_std = np.std(test_scores, axis=1)
+
+      ax = fig.add_subplot(150+(i+1))
+      ax.plot(train_sizes, train_mean, color='blue', marker='o', markersize=5, label='Training accuracy')
+      ax.fill_between(train_sizes, train_mean + train_std, train_mean - train_std, alpha=0.15, color='blue')
+      ax.plot(train_sizes, test_mean, color='green', linestyle='--', marker='s', markersize=5, label='Validation accuracy')
+      ax.fill_between(train_sizes, test_mean + test_std, test_mean - test_std, alpha=0.15, color='green')
+      ax.grid()
+      ax.set_ylim((0.2,1))
+      ax.set_xlabel('Dimensione del training set')
+      ax.set_ylabel('Accuracy')# C = ' + str(c))
+      ax.legend(loc='lower right')
+    plt.show()
+
 
 
 
@@ -210,6 +269,7 @@ class c_non_linear_SVM:
           {'kernel': ['rbf'], 'gamma': [.1, 5, 10], 'C': [0.1, 1, 1000]},
       ]'''
 
+    self.SVM = SVM
     self.X = X
     self.Y = Y
 
@@ -222,8 +282,8 @@ class c_non_linear_SVM:
 
   def do_grid_search(self, X, Y):
     param_grid = [
-        {'kernel': ['rbf'], 'gamma': [.1, 5], 'C': [0.1, 1, 1000]}#,
-        #{'kernel': ['poly'], 'degree': [1, 3], 'coef0': [1, 10, 50]}
+        {'kernel': ['rbf'], 'gamma': [.1, 5, 10], 'C': [0.1, 1, 1000]},
+        {'kernel': ['poly'], 'degree': [1, 3, 5, 10, 20], 'coef0': [1, 10, 50]}
     ]
     '''
             {'kernel': ['rbf'], 'gamma': [.1, 5, 10], 'C': [0.1, 1, 1000]},
@@ -244,53 +304,12 @@ class c_non_linear_SVM:
     results = grid_search.cv_results_
     results = pd.DataFrame(results)[['mean_test_score','params']]
     results.sort_values(by='mean_test_score',ascending=False,inplace=True)
-    print(results)
+    # The regressor.best_score_ is the average of r2 scores on left-out test folds for the best parameter combination.
+    #print(results)
 
 
 
-
-  def plot_2d_chart(self):
-    # stampa N grafici, non 1 solo
-    plt.subplot(121)
-    plot_predictions(self.SVM, [-1.5, 2.5, -1, 1.5])
-    plot_dataset(self.X, self.Y, [-1.5, 2.5, -1, 1.5])
-    plt.title(r"$d=2, r=1, C=5$", fontsize=18)
-
-    plt.subplot(122)
-    plot_predictions(self.SVM, [-1.5, 2.5, -1, 1.5])
-    plot_dataset(self.X, self.Y, [-1.5, 2.5, -1, 1.5])
-    plt.title(r"$d=7, r=1, C=5$", fontsize=18)
-
-    plt.show()
-
-
-
-  def plot_rbf_hyperparams(self):
-    # stampa N grafici separati, non 1 solo unico
-
-    gamma1, gamma2 = 0.1, 5
-    C1, C2 = 0.001, 1000
-    hyperparams = (gamma1, C1), (gamma1, C2), (gamma2, C1), (gamma2, C2)
-
-    svm_clfs = []
-    for gamma, C in hyperparams:
-      rbf_kernel_svm_clf = SVC(kernel="rbf", gamma=gamma, C=C)
-      rbf_kernel_svm_clf.fit(self.X, self.Y)
-      svm_clfs.append(rbf_kernel_svm_clf)
-
-    plt.figure(figsize=(11, 7))
-
-    for i, svm_clf in enumerate(svm_clfs):
-      plt.subplot(221 + i)
-      plot_predictions(svm_clf, [-1.5, 2.5, -1, 1.5])
-      plot_dataset(self.X, self.Y, [-1.5, 2.5, -1, 1.5])
-      gamma, C = hyperparams[i]
-      plt.title(r"$\gamma = {}, C = {}$".format(gamma, C), fontsize=16)
-    plt.show()
-  
-
-
-  def plot_learning_curves(self):
+  def plot_learning_curves_RBF(self):
     gamma1, gamma2 = 0.1, 2
     C1, C2 = 0.01, 5
     hyperparams = (gamma1, C1), (gamma1, C2), (gamma2, C1), (gamma2, C2)
@@ -327,6 +346,44 @@ class c_non_linear_SVM:
 
 
 
+  def plot_learning_curves_POLY(self):
+    dg1, dg2 = 1, 5 # degree
+    C1, C2 = 1, 10 # 0.01, 5 # coeff0
+    hyperparams = (dg1, C1), (dg1, C2), (dg2, C1), (dg2, C2)
+
+    train_sizes, train_means, test_means, test_stds, train_stds = [],[],[],[],[]
+    for Degree, Coef0 in hyperparams:
+      kernel_svm_clf = SVC(kernel="poly", degree = Degree, coef0 = Coef0)
+      train_size, train_scores, test_scores = learning_curve(kernel_svm_clf,
+                                                        X=self.X,
+                                                        y=self.Y,
+                                                        train_sizes=np.linspace(0.1,1.0,10),
+                                                        cv=5,
+                                                        n_jobs=-1)
+      print('fatto {}, {}'.format(Degree, Coef0))
+      train_means.append(np.mean(train_scores, axis=1))
+      train_stds.append(np.std(train_scores, axis=1))
+      test_means.append(np.mean(test_scores, axis=1))
+      test_stds.append(np.std(test_scores, axis=1))
+      train_sizes.append(train_size)
+
+    fig= plt.figure(figsize=(12, 8))
+    for i in range(4):
+      ax = fig.add_subplot(221+i)
+      ax.plot(train_sizes[i], train_means[i], color='blue', marker='o', markersize=5, label='Training accuracy')
+      ax.fill_between(train_sizes[i], train_means[i] + train_stds[i], train_means[i] - train_stds[i], alpha=0.15, color='blue')
+      ax.plot(train_sizes[i], test_means[i], color='green', linestyle='--', marker='s', markersize=5, label='Validation accuracy')
+      ax.fill_between(train_sizes[i], test_means[i] + test_stds[i], test_means[i] - test_stds[i], alpha=0.15, color='green')
+      ax.grid()
+      ax.set_ylim((0.4,1))
+      ax.set_ylabel('Accuracy')
+      ax.legend(loc='lower right')
+      ax.set_title('Degree: ' + str(hyperparams[i][0]) + ' |  Coef0: ' + str(hyperparams[i][1]))
+      #ax.set_title(r"$\Degree={}, coef0={}$".format(*hyperparams[i]), fontsize=18)
+    plt.show()
+
+
+
 
 
 
@@ -336,6 +393,7 @@ class c_decision_tree:
     self.Y = Y
     tree_clf = DecisionTreeClassifier(max_depth=2, random_state=42) # min_samples_leaf
     tree_clf.fit(X, Y)
+    self.tree_clf = tree_clf
     
     y_train_predicted = tree_clf.predict(X)
     self.train_accuracy, self.train_precision, self.train_recall, self.train_F1_score = compute_model_stats(Y, y_train_predicted, 'Tree (Train)')
@@ -344,39 +402,6 @@ class c_decision_tree:
     self.test_accuracy, self.test_precision, self.test_recall, self.test_F1_score = compute_model_stats(Y_test, y_test_predicted, 'Tree (test) ')
 
 
-  def plot_decision_boundary(self):
-    def plot_decision_boundary(clf, X, y, axes=[-1.5, 2.5, -1, 1.5], iris=True, legend=False, plot_training=True, alpha = 0.8):
-        x1s = np.linspace(axes[0], axes[1], 100)
-        x2s = np.linspace(axes[2], axes[3], 100)
-        x1, x2 = np.meshgrid(x1s, x2s)
-        X_new = np.c_[x1.ravel(), x2.ravel()]
-        y_pred = clf.predict(X_new).reshape(x1.shape)
-        custom_cmap = ListedColormap(['#fafab0','#9898ff','#a0faa0'])
-        plt.contourf(x1, x2, y_pred, alpha=0.3, cmap=custom_cmap)
-        if not iris:
-            custom_cmap2 = ListedColormap(['#7d7d58','#4c4c7f','#507d50'])
-            plt.contour(x1, x2, y_pred, cmap=custom_cmap2, alpha=alpha)
-        if plot_training:
-            plt.plot(X[:, 0][y==0], X[:, 1][y==0], "yo", label="Iris-Setosa")
-            plt.plot(X[:, 0][y==1], X[:, 1][y==1], "bs", label="Iris-Versicolor")
-            plt.plot(X[:, 0][y==2], X[:, 1][y==2], "g^", label="Iris-Virginica")
-            plt.axis(axes)
-        if iris:
-            plt.xlabel("Petal length", fontsize=14)
-            plt.ylabel("Petal width", fontsize=14)
-        else:
-            plt.xlabel(r"$x_1$", fontsize=18)
-            plt.ylabel(r"$x_2$", fontsize=18, rotation=0)
-        if legend:
-            plt.legend(loc="lower right", fontsize=14)
-
-    plt.figure(figsize=(8, 4))
-    plot_decision_boundary(self.tree_clf, self.X, self.Y)
-    plt.plot([2.45, 2.45], [0, 3], "k-", linewidth=2)
-    plt.plot([2.45, 7.5], [1.75, 1.75], "k--", linewidth=2)
-    plt.text(1.40, 1.0, "Profondita'=0", fontsize=15)
-    plt.text(3.2, 1.80, "Profondita'=1", fontsize=13)
-    plt.show()
 
   def plot_learning_curve(self):
     min_leaf = [5, 10, 100, 200, 350]
@@ -408,7 +433,7 @@ class c_decision_tree:
       ax.set_ylim((0.4,1))
       ax.set_ylabel('Accuracy')
       ax.legend(loc='lower right')
-      ax.set_title(r"min_sam_leaf:{}".format(min_leaf[i]), fontsize=18)
+      ax.set_title(r"min_sam_leaf: {}".format(min_leaf[i]), fontsize=12)
     plt.show()
 
 
@@ -484,6 +509,41 @@ class c_random_forest:
 
 
 
+
+  def plot_learning_curve(self):
+    OPT = [20, 64, 128, 256]
+
+    train_sizes, train_means, test_means, test_stds, train_stds = [],[],[],[],[]
+    for opt in OPT:
+      dt_mlf = RandomForestClassifier(n_estimators=250, max_leaf_nodes=5, n_jobs=-1)  # n_estimators=250, max_leaf_nodes=64  max_features=10)   # min_samples_leaf=mlf, random_state=42, max_depth=15)
+      train_size, train_scores, test_scores = learning_curve(dt_mlf,
+                                                          X=self.X,
+                                                          y=self.Y,
+                                                          train_sizes=np.linspace(0.1,1.0,10),
+                                                          cv=10,
+                                                          n_jobs=-1)
+      print('fatto {}'.format(opt))
+      train_means.append(np.mean(train_scores, axis=1))
+      train_stds.append(np.std(train_scores, axis=1))
+      test_means.append(np.mean(test_scores, axis=1))
+      test_stds.append(np.std(test_scores, axis=1))
+      train_sizes.append(train_size)
+
+    fig= plt.figure(figsize=(12, 8))
+    for i in range(5):
+      ax = fig.add_subplot(231+i)
+      ax.plot(train_sizes[i], train_means[i], color='blue', marker='o', markersize=5, label='Training accuracy')
+      ax.fill_between(train_sizes[i], train_means[i] + train_stds[i], train_means[i] - train_stds[i], alpha=0.15, color='blue')
+      ax.plot(train_sizes[i], test_means[i], color='green', linestyle='--', marker='s', markersize=5, label='Validation accuracy')
+      ax.fill_between(train_sizes[i], test_means[i] + test_stds[i], test_means[i] - test_stds[i], alpha=0.15, color='green')
+      ax.grid()
+      ax.set_ylim((0.4,1))
+      ax.set_ylabel('Accuracy')
+      ax.legend(loc='lower right')
+      ax.set_title(r"max_depth: {}".format(OPT[i]), fontsize=12)
+    plt.show()
+
+
   def ada_boosting(self):
     '''
       ## Boosting
@@ -534,52 +594,6 @@ class c_random_forest:
 
 
 
-
-
-  def supp_plot_predictions(self, regressors, X, y, axes, label=None, style="r-", data_style="b.", data_label=None):
-    x1 = np.linspace(axes[0], axes[1], 500)
-    y_pred = sum(regressor.predict(x1.reshape(-1, 1)) for regressor in regressors)
-    plt.plot(X[:, 0], y, data_style, label=data_label)
-    plt.plot(x1, y_pred, style, linewidth=2, label=label)
-    if label or data_label:
-      plt.legend(loc="upper center", fontsize=16)
-    plt.axis(axes)
-
-
-
-  def plot_predicts(self, X_rnd, y_rnd, tree_reg1, tree_reg2, tree_reg3, y2, y3):
-    plt.figure(figsize=(11,11))
-    plt.subplot(321)
-    self.supp_plot_predictions([tree_reg1], X_rnd, y_rnd, axes=[-0.5, 0.5, -0.1, 0.8], label="$h_1(x_1)$", style="g-", data_label="Training set")
-    plt.ylabel("$y$", fontsize=16, rotation=0)
-    plt.title("Residui e DT", fontsize=16)
-
-    plt.subplot(322)
-    self.supp_plot_predictions([tree_reg1], X_rnd, y_rnd, axes=[-0.5, 0.5, -0.1, 0.8], label="$h(x_1) = h_1(x_1)$", data_label="Training set")
-    plt.ylabel("$y$", fontsize=16, rotation=0)
-    plt.title("Predizione Gradient Boosting", fontsize=16)
-
-    plt.subplot(323)
-    self.supp_plot_predictions([tree_reg2], X_rnd, y2, axes=[-0.5, 0.5, -0.5, 0.5], label="$h_2(x_1)$", style="g-", data_style="k+", data_label="Residuals")
-    plt.ylabel("$y - h_1(x_1)$", fontsize=16)
-
-    plt.subplot(324)
-    self.supp_plot_predictions([tree_reg1, tree_reg2], X_rnd, y_rnd, axes=[-0.5, 0.5, -0.1, 0.8], label="$h(x_1) = h_1(x_1) + h_2(x_1)$")
-    plt.ylabel("$y$", fontsize=16, rotation=0)
-
-    plt.subplot(325)
-    self.supp_plot_predictions([tree_reg3], X_rnd, y3, axes=[-0.5, 0.5, -0.5, 0.5], label="$h_3(x_1)$", style="g-", data_style="k+")
-    plt.ylabel("$y - h_1(x_1) - h_2(x_1)$", fontsize=16)
-    plt.xlabel("$x_1$", fontsize=16)
-
-    plt.subplot(326)
-    self.supp_plot_predictions([tree_reg1, tree_reg2, tree_reg3], X_rnd, y_rnd, axes=[-0.5, 0.5, -0.1, 0.8], label="$h(x_1) = h_1(x_1) + h_2(x_1) + h_3(x_1)$")
-    plt.xlabel("$x_1$", fontsize=16)
-    plt.ylabel("$y$", fontsize=16, rotation=0)
-    plt.show()
-
-
-
   def gradient_boosting(self):
     '''
     (Non prende dati della classe, è solo un esempio)
@@ -587,6 +601,49 @@ class c_random_forest:
             Similmente ad AdaBoost, Gradient Boosting agisce in maniera sequenziale ma in ogni step 
             il classificatore apprende sugli errori residui del classificatore precedente.
     '''
+
+
+    def plot_predicts(X_rnd, y_rnd, tree_reg1, tree_reg2, tree_reg3, y2, y3):
+      def supp_plot_predictions(regressors, X, y, axes, label=None, style="r-", data_style="b.", data_label=None):
+        x1 = np.linspace(axes[0], axes[1], 500)
+        y_pred = sum(regressor.predict(x1.reshape(-1, 1)) for regressor in regressors)
+        plt.plot(X[:, 0], y, data_style, label=data_label)
+        plt.plot(x1, y_pred, style, linewidth=2, label=label)
+        if label or data_label:
+          plt.legend(loc="upper center", fontsize=16)
+        plt.axis(axes)
+
+
+      plt.figure(figsize=(11,11))
+      plt.subplot(321)
+      supp_plot_predictions([tree_reg1], X_rnd, y_rnd, axes=[-0.5, 0.5, -0.1, 0.8], label="$h_1(x_1)$", style="g-", data_label="Training set")
+      plt.ylabel("$y$", fontsize=16, rotation=0)
+      plt.title("Residui e DT", fontsize=16)
+
+      plt.subplot(322)
+      supp_plot_predictions([tree_reg1], X_rnd, y_rnd, axes=[-0.5, 0.5, -0.1, 0.8], label="$h(x_1) = h_1(x_1)$", data_label="Training set")
+      plt.ylabel("$y$", fontsize=16, rotation=0)
+      plt.title("Predizione Gradient Boosting", fontsize=16)
+
+      plt.subplot(323)
+      supp_plot_predictions([tree_reg2], X_rnd, y2, axes=[-0.5, 0.5, -0.5, 0.5], label="$h_2(x_1)$", style="g-", data_style="k+", data_label="Residuals")
+      plt.ylabel("$y - h_1(x_1)$", fontsize=16)
+
+      plt.subplot(324)
+      supp_plot_predictions([tree_reg1, tree_reg2], X_rnd, y_rnd, axes=[-0.5, 0.5, -0.1, 0.8], label="$h(x_1) = h_1(x_1) + h_2(x_1)$")
+      plt.ylabel("$y$", fontsize=16, rotation=0)
+
+      plt.subplot(325)
+      supp_plot_predictions([tree_reg3], X_rnd, y3, axes=[-0.5, 0.5, -0.5, 0.5], label="$h_3(x_1)$", style="g-", data_style="k+")
+      plt.ylabel("$y - h_1(x_1) - h_2(x_1)$", fontsize=16)
+      plt.xlabel("$x_1$", fontsize=16)
+
+      plt.subplot(326)
+      supp_plot_predictions([tree_reg1, tree_reg2, tree_reg3], X_rnd, y_rnd, axes=[-0.5, 0.5, -0.1, 0.8], label="$h(x_1) = h_1(x_1) + h_2(x_1) + h_3(x_1)$")
+      plt.xlabel("$x_1$", fontsize=16)
+      plt.ylabel("$y$", fontsize=16, rotation=0)
+      plt.show()
+
     X_rnd = np.random.rand(100, 1) - 0.5
 
     y_rnd = 3*X_rnd[:, 0]**2 + 0.05 * np.random.randn(100)
@@ -601,5 +658,6 @@ class c_random_forest:
     tree_reg3 = DecisionTreeRegressor(max_depth=2, random_state=42)
     tree_reg3.fit(X_rnd, y3)
 
-    self.plot_predicts(X_rnd, y_rnd, tree_reg1, tree_reg2, tree_reg3, y2, y3)
+    plot_predicts(X_rnd, y_rnd, tree_reg1, tree_reg2, tree_reg3, y2, y3)
+
 

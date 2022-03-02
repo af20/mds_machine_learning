@@ -41,8 +41,14 @@ from library import *
 
 
 def do_ETL():
+  N_DATA, SEED = 500, 0
 
   df = pd.read_csv('data/aug_train.csv')
+  np.random.seed(SEED)
+  rdm = np.random.randint(0, df.shape[0]-1, N_DATA)
+  df = df.iloc[rdm]
+
+
   df['company_size'] = [str(x) for x in df['company_size'].tolist()]
 
   v_target = df['target'].tolist()
