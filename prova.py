@@ -1,4 +1,4 @@
-
+import ETL
 
 #df['company_size'].astype(str).tolist()
 #print(df['company_size'].tolist())
@@ -17,3 +17,6 @@
 #   ('imputer', FunctionTransformer(unknown_imputer))
 #   #('map', FunctionTransformer(my_Map_function))
 # ])
+
+
+ETL.SimpleImputer

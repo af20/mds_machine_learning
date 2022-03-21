@@ -39,6 +39,12 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.utils.fixes import loguniform
 
 # Unsupervised Learning
+# Clustering algorithms and evaluation metrics
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
+from sklearn.metrics import silhouette_score, silhouette_samples, normalized_mutual_info_score
+from scipy.cluster.hierarchy import dendrogram
+from sklearn.neighbors import NearestNeighbors
+
 
 # Visualization
 import matplotlib.pyplot as plt
@@ -105,10 +111,12 @@ class c_Logistic_Regression:
     self.y_train, self.y_test = y_train, y_test
     
     y_train_predicted = self.predict_Y(X_train, y_train, treshold)
+    self.y_train_predicted = y_train_predicted
     # print('y_train_predicted', y_train_predicted) # len: 15326       [False False  True ... False  True False]
     self.train_accuracy, self.train_precision, self.train_recall, self.train_F1_score = compute_model_stats(y_train, y_train_predicted, 'Log.Reg. (Train)')
 
     y_test_predicted = self.predict_Y(X_test, y_test, treshold)
+    self.y_test_predicted = y_test_predicted
     # print('len  y_test_predicted', len(y_test_predicted)) # len: 3832
     self.test_accuracy, self.test_precision, self.test_recall, self.test_F1_score = compute_model_stats(y_test, y_test_predicted, 'Log.Reg. (Test) ')
 
@@ -453,7 +461,7 @@ class c_random_forest:
     self.X = X
     self.Y = Y
     self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(self.X, self.Y, test_size=0.2, stratify=Y)
-    self.RF_clf = RandomForestClassifier(n_estimators=250, max_leaf_nodes=64, n_jobs=-1)#, max_features=10)
+    self.RF_clf = RandomForestClassifier(n_estimators=250, max_leaf_nodes=64, max_depth=50, n_jobs=-1)#, max_features=10)
     self.RF_clf.fit(self.X_train, self.y_train)
 
     y_train_predicted = self.RF_clf.predict(X)
@@ -511,18 +519,18 @@ class c_random_forest:
 
 
   def plot_learning_curve(self):
-    OPT = [20, 64, 128, 256]
+    OPT = [None, 2, 5, 10, 30]
 
     train_sizes, train_means, test_means, test_stds, train_stds = [],[],[],[],[]
     for opt in OPT:
-      dt_mlf = RandomForestClassifier(n_estimators=250, max_leaf_nodes=5, n_jobs=-1)  # n_estimators=250, max_leaf_nodes=64  max_features=10)   # min_samples_leaf=mlf, random_state=42, max_depth=15)
+      dt_mlf = RandomForestClassifier(n_estimators=250, max_leaf_nodes=64, max_depth=opt, n_jobs=-1)  # n_estimators=250, max_leaf_nodes=64  max_features=10)   # min_samples_leaf=mlf, random_state=42)
       train_size, train_scores, test_scores = learning_curve(dt_mlf,
                                                           X=self.X,
                                                           y=self.Y,
                                                           train_sizes=np.linspace(0.1,1.0,10),
                                                           cv=10,
                                                           n_jobs=-1)
-      print('fatto {}'.format(opt))
+      print('fatto {}'.format(str(opt)))
       train_means.append(np.mean(train_scores, axis=1))
       train_stds.append(np.std(train_scores, axis=1))
       test_means.append(np.mean(test_scores, axis=1))
@@ -660,4 +668,130 @@ class c_random_forest:
 
     plot_predicts(X_rnd, y_rnd, tree_reg1, tree_reg2, tree_reg3, y2, y3)
 
+
+
+
+
+
+class c_clust:
+  def __init__(self, X_train):
+    self.X_train = X_train
+
+    km_blob = KMeans(n_clusters = 2,  #3 clusters
+                init= 'k-means++',  # random initialization ['random', 'k-means++']
+                n_init= 10, # number of re-iterations
+                max_iter= 300, # max number of iteration per run
+                tol= 1e-4, # minimum increase 10^(-4)
+                random_state=0)
+    Y_train = km_blob.fit_predict(X_train)
+
+    plt.scatter(X_train[Y_train == 0,0], X_train[Y_train == 0,1], s=50, c='lightgreen',
+                marker='s', edgecolor='black', label='cluster 1')
+    plt.scatter(X_train[Y_train == 1,0], X_train[Y_train == 1,1],
+                s=50, c='orange', marker='o', edgecolor='black', label='cluster 2')
+    plt.scatter(km_blob.cluster_centers_[:,0],km_blob.cluster_centers_[:,1],
+                s=250, marker='*', c='red', edgecolor='black', label='centroids')
+    plt.legend(scatterpoints=1)
+    plt.show()
+
+
+  def plot_distorsion(self):
+    distortions = []
+    for i in np.arange(1,11):
+        km = KMeans(n_clusters= i, 
+                    init='k-means++', 
+                    n_init=10, 
+                    max_iter=300, 
+                    random_state=0)
+        km.fit(self.X_train)
+        distortions.append(km.inertia_)
+      
+    plt.plot(np.arange(1,11),distortions)
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Distortion')
+    plt.show()
+
+
+
+
+
+
+class c_Neural_Network:
+  # Artificial Neural Networks
+  # MLP: ML Process
+  def __init__(self, X_train, Y_train, X_test, Y_test):
+    #(X_train_full, y_train_full),(X_test, y_test) = keras.datasets.fashion_mnist.load_data()
+    #print(X_train_full.shape, X_test.shape)
+    
+    from tensorflow import keras
+    from sklearn.datasets import fetch_california_housing
+
+    model = keras.models.Sequential([ # modello Sequential, i livelli sn messi in seq.
+        #keras.layers.Flatten(input_shape=[28, 28]), # converte l'input originario (matrice NxM) in un vettore
+        keras.layers.Dense(30, activation="relu", input_shape=[8]), # livello hidden 1
+        keras.layers.Dense(10, activation="relu"), # livello hidden 2
+        keras.layers.Dense(1) # perchè classificaz è binaria quindi Dense(1)        - Dense(10) se avessi 10 classi di output
+    ])
+    #print('model.summary', model.summary())
+
+
+    ''' Compilazione del modello
+      Dopo la creazione di un modello devo specificare la funzione di loss e l'algoritmo di ottimizzazione, 
+      ed eventualmente le metriche di performance da utilizzare. 
+      Il metodo **compile** viene invocato per questi scopi.
+    '''
+    model.compile(loss = 'binary_crossentropy', # 'sparse_categorical_crossentropy' SE MULTI-CLASSE,
+              optimizer = keras.optimizers.SGD(learning_rate=1e-3), # 'sgd',
+              metrics =  ['accuracy']
+             )
+
+    #X_valid_part, X_train_part = X_train[:5000] / 255., X_train[5000:] / 255.
+    #y_valid_part, y_train_part = Y_train[:5000], Y_train[5000:]
+
+    X_train, X_valid, Y_train, Y_valid = train_test_split(X_train, Y_train, test_size = 0.2, random_state = 42)
+
+
+    '''
+      L'oggetto **History** restituito dal metodo fit contiene i parametri di training (**.params**), 
+      la lista delle epoche (**.epoch**) e un dict con i valori della loss function e delle metriche di performance sul training e validation set per ogni epoca.
+    '''
+
+    
+    history = model.fit(X_train, Y_train, 
+                        epochs=30, 
+                        validation_data=(X_valid, Y_valid)
+                      ) # XXX Dà ERRORE QUA
+    accuracy = model.evaluate(X_test, Y_test)
+    print('accuracy', accuracy)
+    X_new = X_test[:3]
+    y_pred = model.predict(X_new)
+
+    # SALVO MODELLO (Serializzare): rappresento un mio oggetto in modo che possa essere salvato (checkpoint dello stato)
+    '''
+    COME FUNZ APPRENDIM e MODIFICA pesi nella NN
+      calcolo f.loss 
+      Backpropagation: da output a input mi permette di aggiornare i pesi, portandosi dietro il gradiente (se grad = 0 --> nessun update)
+        batch, per i k sottoinsiemi su cui ho diviso il dataset, faccio avanti-indietro
+        e alla fine dell'epoca mi porta a avere riduzione importante della loss
+          (è il cuore addestramento reti neurali: sia dense multi-layer    ||  convuluzionali  ||  ricorrenti)
+    SALVATAGGIO BEST-MODEL: quello k ha ottenuto loss + bassa
+
+    NNetw utilizzate oggi xk hanno trovato modo per far sì che gradiente non sia 0 per aggiornamento (problema vanishing gradinent) 2010
+      - funzione attivazione
+      - varianza layer
+
+    Activation function: introduce la NON linearità
+    '''
+    return
+
+    print(history.params, history.epoch); pd.DataFrame(history.history).plot(figsize=(12,4)); plt.grid(True); plt.show()
+
+    # Osserviamo un po' di overfitting.
+    # Nel caso venga invocato nuovamente il metodo fit, senza ricreare il modello, il processo di training riprende dall'ultimo stato dei parametri.
+    print(model.evaluate(X_test, Y_test)) # Per valutare il modello appresso sul test set utilizziamo il metodo **evaluate**.
+
+    # Mediante il metodo **predict** eseguiamo una predizione circa una nuova istanza.
+    print(model.predict(X_test[:3]))
+
+    # Se invece voglio ottenere la classe predetta, si utilizza il metodo **predict_classes**.      np.array(class_names)[model.predict_classes(X_test[:3])]
 

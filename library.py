@@ -99,3 +99,19 @@ def compute_model_stats(y_real, y_predicted, label):
   F1_score = round(f1_score(y_real, y_predicted),2)
   print('  ' + label + '  |  accuracy:', accuracy, '     precision:', precision, '    recall:', recall, '    f1_score:', F1_score)
   return accuracy, precision, recall, F1_score
+
+
+
+
+def plot_precision_recall_curve(y_train, v_target):
+  from sklearn.metrics import precision_recall_curve
+  import matplotlib.pyplot as plt
+
+  prec, recall, soglia = precision_recall_curve(y_train, v_target)
+
+  fig_prc = plt.figure(figsize=(16,9))
+  ax = fig_prc.add_subplot()
+  ax.plot(soglia, prec[:-1], 'r', label = 'precision')
+  ax.plot(soglia, recall[:-1], 'b', label = 'recall')
+  ax.legend(fontsize=20)
+  plt.show()

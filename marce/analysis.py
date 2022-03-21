@@ -29,12 +29,8 @@ print('    T_START', T_START)
 
 Matrix, v_target = do_ETL()
 X_train, X_test, y_train, y_test = train_test_split(Matrix, v_target, test_size = 0.2, random_state = 42)
-print('UNQ:', np.unique(y_train))
-L0 = [x for x in y_train if x == 0]
-L1 = [x for x in y_train if x == 1]
-print(len(L0), len(L1))
 
-#PERCEPTRON = c_Perceptron(X_train, X_test, y_train, y_test)
+PERCEPTRON = c_Perceptron(X_train, X_test, y_train, y_test)
 #LOG_REGR = c_Logistic_Regression(X_train, X_test, y_train, y_test, treshold=1)
 
 #LINEAR_SVM = c_linear_SVM(X_train, X_test, y_train, y_test)

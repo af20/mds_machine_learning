@@ -40,16 +40,38 @@ from library import *
 '''
 
 
-def do_ETL():
-  N_DATA, SEED = 500, 0
+def lib_ETL_manage_imbalance(manage_imbalanced, Matrix, v_target):
+  assert manage_imbalanced in [None, 'over', 'under']
+
+  if manage_imbalanced != None:
+    if manage_imbalanced == 'over':
+      from imblearn.over_sampling import RandomOverSampler
+      ros = RandomOverSampler()
+      Matrix, v_target = ros.fit_resample(Matrix, v_target)
+    elif manage_imbalanced == 'under':
+      from imblearn.under_sampling import RandomUnderSampler
+      rus = RandomUnderSampler()
+      Matrix, v_target = rus.fit_resample(Matrix, v_target)
+    #print('UQ', np.unique(v_target, return_counts=True)[1])
+  return Matrix, v_target
+  
+
+
+def do_ETL(data_percentage=100):
+  data_percentage = min(100, max(1,data_percentage))
 
   df = pd.read_csv('data/aug_train.csv')
+
+  N_DATA, SEED = int(df.shape[0] * data_percentage/100), 0
+  #N_DATA = max(10, min(N_DATA, df.shape[0]))
+
   np.random.seed(SEED)
   rdm = np.random.randint(0, df.shape[0]-1, N_DATA)
   df = df.iloc[rdm]
 
 
   df['company_size'] = [str(x) for x in df['company_size'].tolist()]
+  #print( df['target'].value_counts())
 
   v_target = df['target'].tolist()
   df.drop(columns=['target', 'enrollee_id', 'city'], inplace=True)
@@ -85,7 +107,7 @@ def do_ETL():
 
   data_preprocessing = ColumnTransformer(
     [
-      ('relv_exp', rel_exp_PP, ['relevent_experience']), # TODO ORDINAL ENCODER !!! df['relevent_experience'] = df['relevent_experience'].map({'No relevent experience': 0, 'Has relevent experience': 1}).tolist()
+      ('relv_exp', rel_exp_PP, ['relevent_experience']),
       
       ('exp', experience_PP, ['experience']),
       ('disc', one_hot_PP, ['major_discipline']),
